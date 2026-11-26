@@ -79,48 +79,51 @@ export const FEAT_DESCRIPTIONS = {
   'perfect-landing': 'Touched down softer than 170 ft/min.',
   'all-rings': 'Flew every ring on a leg.',
   'smooth-operator': 'Finished a leg with no damage.',
-  'storm-rider': 'Flew the storm leg and lived.',
+  'storm-rider': 'Flew the blizzard leg and lived.',
   'cargo-ace': 'Dropped the supplies within 40 ft of the mark.',
   'full-route': 'Flew all six legs of the Meridian route.',
 };
 
-/** Sky palettes, one per time of day. Every leg picks one. */
+/** Sky palettes, one per time of day. Winter edition, pass 2: EVERY sky is cold — a pale
+ *  winter sun, steel-blue sea and snow-light ground. Each leg keeps its own time of day
+ *  (dawn, day, dusk, blizzard, night, golden hour) but none of them reads warm or summery:
+ *  no orange, no pink, no peach anywhere in the sky, the sea or the ground. */
 export const SKIES = {
   dawn: {
-    top: '#2c3a6e', mid: '#e08a7a', low: '#f7c489', sun: '#ffd9a0', sunX: 0.72, sunY: 0.30,
-    cloud: '#ffd9c2', cloudShadow: '#b98a9e', seaTop: '#5a7fa8', seaBottom: '#2c4a6e',
-    landTop: '#8a7480', landBottom: '#4e5a50',
-    haze: 'rgba(247,196,137,0.35)', night: false,
+    top: '#2c3a5e', mid: '#93a5c6', low: '#dbe4ee', sun: '#f4f7fa', sunX: 0.72, sunY: 0.26,
+    cloud: '#dbe4ee', cloudShadow: '#7d8aa5', seaTop: '#4a6a85', seaBottom: '#24384e',
+    landTop: '#dde3e9', landBottom: '#aab2bd',
+    haze: 'rgba(219,228,238,0.35)', night: false,
   },
   day: {
-    top: '#2f6fd0', mid: '#7db3e8', low: '#cfe8f7', sun: '#fff3c4', sunX: 0.22, sunY: 0.18,
-    cloud: '#ffffff', cloudShadow: '#c8d8ea', seaTop: '#3f8fbf', seaBottom: '#1d5a86',
-    landTop: '#a8a89a', landBottom: '#7a7f6e',
-    haze: 'rgba(207,232,247,0.25)', night: false,
+    top: '#33577e', mid: '#7ea3c8', low: '#dbe8f2', sun: '#f8fbff', sunX: 0.22, sunY: 0.16,
+    cloud: '#ffffff', cloudShadow: '#b8c8dc', seaTop: '#3a6f96', seaBottom: '#1d4258',
+    landTop: '#dde3e8', landBottom: '#a9b4be',
+    haze: 'rgba(219,232,242,0.3)', night: false,
   },
   dusk: {
-    top: '#3a2a5e', mid: '#c65f6e', low: '#f7a45c', sun: '#ffb347', sunX: 0.28, sunY: 0.34,
-    cloud: '#f2a58c', cloudShadow: '#8a5a7a', seaTop: '#5e5a8e', seaBottom: '#2c2a52',
-    landTop: '#8a6a72', landBottom: '#54485a',
-    haze: 'rgba(247,164,92,0.35)', night: false,
+    top: '#262a4a', mid: '#5d6a94', low: '#a9b4cc', sun: '#f2eee2', sunX: 0.28, sunY: 0.32,
+    cloud: '#a9b4cc', cloudShadow: '#4d5470', seaTop: '#3f4a6e', seaBottom: '#1e2438',
+    landTop: '#c9ccd8', landBottom: '#8a8fa0',
+    haze: 'rgba(169,180,204,0.35)', night: false,
   },
   storm: {
-    top: '#1c2430', mid: '#3a4757', low: '#5a6a72', sun: '#c8d2d8', sunX: 0.68, sunY: 0.16,
-    cloud: '#4a5560', cloudShadow: '#232c36', seaTop: '#3d5566', seaBottom: '#1d2f3e',
-    landTop: '#5a6672', landBottom: '#333e48',
-    haze: 'rgba(90,106,114,0.4)', night: false,
+    top: '#141a24', mid: '#2c3644', low: '#4c565e', sun: '#c8d2d8', sunX: 0.68, sunY: 0.14,
+    cloud: '#3e4854', cloudShadow: '#1e262e', seaTop: '#3a4f60', seaBottom: '#1c2c3a',
+    landTop: '#6a727c', landBottom: '#3c444e',
+    haze: 'rgba(200,210,220,0.5)', night: false,
   },
   night: {
-    top: '#060a1c', mid: '#0d1533', low: '#1d2a52', sun: '#e8ecf7', sunX: 0.76, sunY: 0.20,
+    top: '#05081a', mid: '#0d1533', low: '#1d2a52', sun: '#e8ecf7', sunX: 0.76, sunY: 0.20,
     cloud: '#2a3560', cloudShadow: '#141c38', seaTop: '#16233f', seaBottom: '#070d1d',
-    landTop: '#232c44', landBottom: '#121828',
+    landTop: '#2c3448', landBottom: '#1a2032',
     haze: 'rgba(13,21,51,0.5)', night: true,
   },
   golden: {
-    top: '#4a3a7a', mid: '#e08a4a', low: '#ffd27a', sun: '#ffe9a8', sunX: 0.62, sunY: 0.32,
-    cloud: '#ffd9a8', cloudShadow: '#a87a68', seaTop: '#3f7fb0', seaBottom: '#1e4a72',
-    landTop: '#8f7a6a', landBottom: '#5c4f47',
-    haze: 'rgba(255,210,122,0.4)', night: false,
+    top: '#3d4266', mid: '#9aa3c2', low: '#e3e8ef', sun: '#fdf3d8', sunX: 0.62, sunY: 0.30,
+    cloud: '#e6ebf2', cloudShadow: '#8f96ac', seaTop: '#3a5a78', seaBottom: '#1d3248',
+    landTop: '#dfe5ea', landBottom: '#aeb8c2',
+    haze: 'rgba(227,232,239,0.4)', night: false,
   },
 };
 

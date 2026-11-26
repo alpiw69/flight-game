@@ -89,7 +89,7 @@ function rr(ctx, x, y, w, h, r) {
 
 function panel(ctx, x, y, w, h) {
   rr(ctx, x, y, w, h, 8);
-  ctx.fillStyle = 'rgba(6,14,24,0.58)';
+  ctx.fillStyle = 'rgba(6,14,24,0.66)';
   ctx.fill();
   ctx.strokeStyle = 'rgba(255,255,255,0.16)';
   ctx.lineWidth = 1;
@@ -130,6 +130,15 @@ function shade(hex, f) {
   const g = Math.min(255, Math.round(parseInt(hex.slice(3, 5), 16) * f));
   const b = Math.min(255, Math.round(parseInt(hex.slice(5, 7), 16) * f));
   return `rgb(${r},${g},${b})`;
+}
+
+/** Mix two #rrggbb colours: t = 0 gives hex1, t = 1 gives hex2. Returns a #rrggbb string. */
+function mix(hex1, hex2, t) {
+  const ch = (a, b) => Math.round(parseInt(a, 16) * (1 - t) + parseInt(b, 16) * t);
+  const r = ch(hex1.slice(1, 3), hex2.slice(1, 3));
+  const g = ch(hex1.slice(3, 5), hex2.slice(3, 5));
+  const b = ch(hex1.slice(5, 7), hex2.slice(5, 7));
+  return `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 }
 
 /** How bright the scenery's colours are for this sky: night and storm mute them. */
@@ -260,12 +269,12 @@ function drawGround(world) {
     groundQuad(-22000, z, c0 - 700, z, c1 - 700, z + 1000, -22000, z + 1000, seaGrad);
     // Turquoise shallows hugging the shore.
     groundQuad(c0 - 700, z, c0, z, c1, z + 1000, c0 - 700, z + 1000, shade(sky.seaTop, 1.45 * tone));
-    // Wet sand, then dry sand.
-    groundQuad(c0, z, c0 + 90, z, c1 + 90, z + 1000, c0, z + 1000, shade('#b89a6a', tone));
-    groundQuad(c0 + 90, z, c0 + CITY.sandWidth, z, c1 + CITY.sandWidth, z + 1000, c0 + 90, z + 1000, shade('#e0c896', tone));
+    // Winter shore: pale ice at the waterline, then snow where the sand was.
+    groundQuad(c0, z, c0 + 90, z, c1 + 90, z + 1000, c0, z + 1000, shade('#c9d2d8', tone));
+    groundQuad(c0 + 90, z, c0 + CITY.sandWidth, z, c1 + CITY.sandWidth, z + 1000, c0 + 90, z + 1000, shade('#eef2f5', tone));
     // Boardwalk where the bay curves in.
     if (c0 > CITY.seaX + 1500 || c1 > CITY.seaX + 1500) {
-      groundQuad(c0 + CITY.sandWidth, z, c0 + CITY.sandWidth + CITY.boardwalkWidth, z, c1 + CITY.sandWidth + CITY.boardwalkWidth, z + 1000, c0 + CITY.sandWidth, z + 1000, shade('#8a6a4a', tone));
+      groundQuad(c0 + CITY.sandWidth, z, c0 + CITY.sandWidth + CITY.boardwalkWidth, z, c1 + CITY.sandWidth + CITY.boardwalkWidth, z + 1000, c0 + CITY.sandWidth, z + 1000, shade('#aab2bb', tone));
     }
     // Wave foam along the waterline.
     ctx.strokeStyle = 'rgba(255,255,255,0.4)';
@@ -279,25 +288,12 @@ function drawGround(world) {
       ctx.stroke();
     }
   }
-  // Beach umbrellas: small coloured dots on the sand where the bay is wide.
-  for (let z = bay.z - bay.width; z <= bay.z + bay.width; z += 350) {
-    const coast = coastX(bay, z);
-    if (coast < CITY.seaX + 1500) continue;
-    for (let i = 0; i < 3; i += 1) {
-      const ux = coast + 130 + hash(i * 7 + z) * 170;
-      const uz = z + hash(i * 11 + z * 3) * 300;
-      const p = projectGround(cam, ux, uz);
-      if (p.y < HORIZON_Y || p.x < -10 || p.x > W + 10) continue;
-      ctx.fillStyle = shade(['#e84a4a', '#f2c230', '#3a9ad9', '#f28a2e'][Math.floor(hash(i * 5 + z) * 4)], tone);
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, 2.6, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
+  // No beach umbrellas in winter: the shore is snow, and the Christmas trees stand
+  // along the boulevard instead (drawn with the city blocks).
   // Marina: a wooden pier reaching into the bay, and the boats moored in it.
   const pz = bay.z;
   const pc = coastX(bay, pz);
-  groundQuad(pc - 900, pz - 60, pc, pz - 60, pc, pz + 60, pc - 900, pz + 60, shade('#8a6a4a', tone));
+  groundQuad(pc - 900, pz - 60, pc, pz - 60, pc, pz + 60, pc - 900, pz + 60, shade('#aab2bb', tone));
   for (const boat of layout.boats) {
     const p = project(CAMERA, boat.x, 0, boat.z);
     if (!p) continue;
@@ -339,8 +335,8 @@ function drawGround(world) {
     ctx.closePath(); ctx.clip();
     const body = skyBodyPosition(sky);
     const glint = ctx.createLinearGradient(0, HORIZON_Y, 0, H);
-    glint.addColorStop(0, 'rgba(255,240,200,0.4)');
-    glint.addColorStop(1, 'rgba(255,240,200,0)');
+    glint.addColorStop(0, 'rgba(225,238,248,0.35)');
+    glint.addColorStop(1, 'rgba(225,238,248,0)');
     ctx.fillStyle = glint;
     ctx.beginPath();
     ctx.moveTo(body.x - 26, HORIZON_Y);
@@ -407,7 +403,9 @@ function drawBlockPads(world) {
     const p2 = projectGround(cam, x1, z0);
     const p3 = projectGround(cam, x1, z1);
     const p4 = projectGround(cam, x0, z1);
-    ctx.fillStyle = shade(pad.color, tone);
+    // Snow-covered blocks: the district tint shows through the snow, it never goes
+    // flat white, so the city keeps its colours under the snow.
+    ctx.fillStyle = shade(mix(pad.color, '#eef2f5', 0.6), tone);
     ctx.beginPath();
     ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.lineTo(p3.x, p3.y); ctx.lineTo(p4.x, p4.y);
     ctx.closePath(); ctx.fill();
@@ -450,7 +448,9 @@ function drawStreets(world) {
   const cam = CAMERA;
   const night = SKIES[world.leg.sky].night;
   const bay = layout.bay;
-  ctx.strokeStyle = night ? 'rgba(255,200,110,0.20)' : 'rgba(30,32,38,0.45)';
+  // Winter streets: ploughed snow-grey lines, not black asphalt, with warm lamp glow
+  // at night.
+  ctx.strokeStyle = night ? 'rgba(255,200,110,0.20)' : 'rgba(70,80,96,0.5)';
   ctx.lineWidth = 2;
   // Longitudinal streets, running the length of the route.
   for (let k = -27; k <= 27; k += 1) {
@@ -499,8 +499,10 @@ function drawStreets(world) {
 
 /** One building, drawn as a solid: ground shadow, coloured walls with windows, a side wall
  *  on the camera's side, and a roof that is coloured, pitched or glass — never a plain
- *  white box. */
-function drawBuilding(b, night, tone, sunLeft) {
+ *  white box. Winter: snow caps the roofs, chimneys smoke, Christmas lights run along
+ *  the eaves of the low houses, and the windows glow warm whenever the light is low
+ *  (night, dusk or golden hour), not only at night. */
+function drawBuilding(b, night, tone, sunLeft, warm) {
   const ctx = CTX;
   const cam = CAMERA;
   const fz = b.z - b.d / 2;
@@ -552,7 +554,7 @@ function drawBuilding(b, night, tone, sunLeft) {
             const u = (j + 0.5) / rows;
             const wx = (1 - t) * (1 - u) * q1.x + t * (1 - u) * q2.x + t * u * q3.x + (1 - t) * u * q4.x;
             const wy = (1 - t) * (1 - u) * q1.y + t * (1 - u) * q2.y + t * u * q3.y + (1 - t) * u * q4.y;
-            ctx.fillStyle = night ? '#ffd27a' : 'rgba(40,60,80,0.55)';
+            ctx.fillStyle = warm ? '#ffd27a' : 'rgba(40,60,80,0.55)';
             ctx.fillRect(wx - 1.5, wy - 1.5, 3, 3);
           }
         }
@@ -579,9 +581,9 @@ function drawBuilding(b, night, tone, sunLeft) {
         if (!lit && !b.glass) continue;
         const px = a.x + 4 + ((i + 0.5) * (wpx - 8)) / cols;
         const py = c.y + 5 + ((j + 0.5) * (hpx - 10)) / rows;
-        if (night || b.glass) {
-          ctx.fillStyle = night ? '#ffd27a' : 'rgba(220,240,255,0.75)';
-          ctx.globalAlpha = night ? 0.5 + hash(b.x + i * 5 + j * 7) * 0.5 : 0.8;
+        if (warm || b.glass) {
+          ctx.fillStyle = warm ? '#ffd27a' : 'rgba(220,240,255,0.75)';
+          ctx.globalAlpha = warm ? 0.5 + hash(b.x + i * 5 + j * 7) * 0.5 : 0.8;
           ctx.fillRect(px - 1.5, py - 1.5, 3, 3);
           ctx.globalAlpha = 1;
         } else {
@@ -638,6 +640,76 @@ function drawBuilding(b, night, tone, sunLeft) {
       }
     }
   }
+  // Snow on the roof: a white cap over the slopes, a full white cover on flat roofs.
+  // The coloured roof still shows at the eaves, so the district colours survive.
+  if (!b.glass) {
+    const snow = shade('#f4f7fa', tone);
+    if (b.pitched) {
+      const apex = project(cam, b.x, b.h + ridgeH, fz);
+      const ap = project(cam, b.x, b.h + ridgeH, bz);
+      const t1 = project(cam, b.x - b.w / 2, b.h, fz);
+      const t2 = project(cam, b.x + b.w / 2, b.h, fz);
+      const t3 = project(cam, b.x + b.w / 2, b.h, bz);
+      const t4 = project(cam, b.x - b.w / 2, b.h, bz);
+      if (t1 && t2 && t3 && t4 && apex && ap) {
+        // Inset toward the ridge: the white sits on the slopes, the coloured eaves show.
+        ctx.fillStyle = snow;
+        ctx.globalAlpha = 0.92;
+        ctx.beginPath();
+        ctx.moveTo((t1.x + apex.x) / 2, (t1.y + apex.y) / 2); ctx.lineTo(apex.x, apex.y); ctx.lineTo(ap.x, ap.y); ctx.lineTo((t4.x + ap.x) / 2, (t4.y + ap.y) / 2); ctx.closePath(); ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(apex.x, apex.y); ctx.lineTo((apex.x + t2.x) / 2, (apex.y + t2.y) / 2); ctx.lineTo((ap.x + t3.x) / 2, (ap.y + t3.y) / 2); ctx.lineTo(ap.x, ap.y); ctx.closePath(); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    } else if (hpx > 8) {
+      const t1 = project(cam, b.x - b.w / 2, b.h, fz);
+      const t2 = project(cam, b.x + b.w / 2, b.h, fz);
+      const t3 = project(cam, b.x + b.w / 2, b.h, bz);
+      const t4 = project(cam, b.x - b.w / 2, b.h, bz);
+      if (t1 && t2 && t3 && t4) {
+        ctx.fillStyle = snow;
+        ctx.globalAlpha = 0.92;
+        ctx.beginPath();
+        ctx.moveTo(t1.x, t1.y); ctx.lineTo(t2.x, t2.y); ctx.lineTo(t3.x, t3.y); ctx.lineTo(t4.x, t4.y);
+        ctx.closePath(); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+  // Chimney with a thin smoke wisp, on pitched roofs big enough to read.
+  if (b.pitched && wpx > 30 && hpx > 20) {
+    const ch = project(cam, b.x + b.w * 0.25, b.h + ridgeH * 0.5, b.z);
+    if (ch) {
+      ctx.fillStyle = shade('#7a6a5e', tone);
+      ctx.fillRect(ch.x - 2, ch.y - 10, 5, 10);
+      ctx.fillStyle = 'rgba(235,240,244,0.55)';
+      for (let i = 0; i < 3; i += 1) {
+        const drift = (hash(b.x * 3 + b.z + i * 7) - 0.5) * 14;
+        ctx.beginPath();
+        ctx.arc(ch.x + drift + i * 3, ch.y - 16 - i * 9, 3.5 + i * 1.6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+  // Christmas lights along the front eave, on low houses big enough to read.
+  if (!b.downtown && !b.glass && wpx > 34 && hpx > 14) {
+    const e1 = project(cam, b.x - b.w / 2, b.h, fz);
+    const e2 = project(cam, b.x + b.w / 2, b.h, fz);
+    if (e1 && e2) {
+      const lights = ['#ff5a4a', '#ffd24a', '#39d98a', '#5ab8ff', '#ff9ad9'];
+      for (let i = 0; i < 6; i += 1) {
+        const t = (i + 0.5) / 6;
+        const lx = e1.x + (e2.x - e1.x) * t;
+        const ly = e1.y + (e2.y - e1.y) * t + 2;
+        ctx.fillStyle = lights[Math.floor(hash(b.x * 11 + b.z + i * 5) * lights.length)];
+        ctx.globalAlpha = warm ? 0.95 : 0.8;
+        ctx.beginPath();
+        ctx.arc(lx, ly, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
   if (b.cab) {
     ctx.fillStyle = night ? '#9fd8ff' : '#bfe3f2';
     ctx.fillRect(a.x, c.y, wpx, Math.max(2, hpx * 0.14));
@@ -662,6 +734,8 @@ function drawBuildings(world, layout) {
   const cam = CAMERA;
   const sky = SKIES[world.leg.sky];
   const night = sky.night;
+  // Windows glow warm whenever the light is low: night, dusk or golden hour.
+  const warm = night || world.leg.sky === 'dusk' || world.leg.sky === 'golden';
   const tone = toneFor(world.leg.sky);
   const sunLeft = sky.sunX < 0.5;
   const sin = Math.sin(cam.heading);
@@ -674,11 +748,11 @@ function drawBuildings(world, layout) {
     const lateral = dx * cos - dz * sin;
     if (Math.abs(lateral) > depth * 0.85 + 600) continue;
     if (b.w * (FOCAL / depth) < 2.5) continue;
-    drawBuilding(b, night, tone, sunLeft);
+    drawBuilding(b, night, tone, sunLeft, warm);
   }
   // The named towers (twin supertalls on the final leg) draw as glass towers too.
   for (const t of layout.towers) {
-    drawBuilding({ x: t.x, z: t.z, w: t.w, d: t.d, h: t.h, roof: '#2c4a6e', wall: '#3a5a7a', glass: true, downtown: true, windows: true, pitched: false }, night, tone, sunLeft);
+    drawBuilding({ x: t.x, z: t.z, w: t.w, d: t.d, h: t.h, roof: '#2c4a6e', wall: '#3a5a7a', glass: true, downtown: true, windows: true, pitched: false }, night, tone, sunLeft, warm);
   }
 }
 
@@ -695,13 +769,13 @@ function drawGarden(world, g, tone) {
   const p2 = projectGround(cam, g.x + g.w / 2, g.z - g.d / 2);
   const p3 = projectGround(cam, g.x + g.w / 2, g.z + g.d / 2);
   const p4 = projectGround(cam, g.x - g.w / 2, g.z + g.d / 2);
-  // Lawn.
-  ctx.fillStyle = shade(sky.night ? '#16241a' : '#4d8a48', tone);
+  // Lawn, under snow: pale blue-grey, with lighter snow patches.
+  ctx.fillStyle = shade(sky.night ? '#1a2430' : '#dfe6ec', tone);
   ctx.beginPath();
   ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.lineTo(p3.x, p3.y); ctx.lineTo(p4.x, p4.y);
   ctx.closePath(); ctx.fill();
-  // Lighter lawn patches.
-  ctx.fillStyle = shade(sky.night ? '#1d3320' : '#5da254', tone);
+  // Lighter snow patches.
+  ctx.fillStyle = shade(sky.night ? '#202c3a' : '#eef2f5', tone);
   for (let i = 0; i < 4; i += 1) {
     const px = g.x - g.w / 2 + hash(i * 7 + 1 + Math.round(g.x / 100)) * g.w;
     const pz = g.z - g.d / 2 + hash(i * 11 + 3 + Math.round(g.z / 100)) * g.d;
@@ -712,19 +786,19 @@ function drawGarden(world, g, tone) {
     ctx.beginPath(); ctx.ellipse(pp.x, pp.y, r, r * 0.42, 0, 0, Math.PI * 2); ctx.fill();
   }
   if (!g.pocket) {
-    // Pond, with a pale rim.
+    // Frozen pond, pale ice with a white rim.
     const pond = project(cam, g.x + g.w * 0.22, 0, g.z - g.d * 0.2);
     if (pond) {
       const rx = 260 * pond.scale;
       if (rx >= 3) {
-        ctx.fillStyle = shade(sky.night ? '#16283a' : '#4a9ac2', tone);
+        ctx.fillStyle = shade(sky.night ? '#1a2c40' : '#9fc4d8', tone);
         ctx.beginPath(); ctx.ellipse(pond.x, pond.y, rx, rx * 0.42, 0, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = 'rgba(255,255,255,0.35)';
         ctx.lineWidth = 1.5;
         ctx.stroke();
       }
     }
-    // Flower beds: clusters of tiny coloured dots.
+    // Bauble beds: clusters of tiny coloured dots, like ornaments scattered in the snow.
     const bedColors = ['#e85a5a', '#f2a0c0', '#ffd24a', '#e86aa0'];
     for (let i = 0; i < 36; i += 1) {
       const bx = g.x - g.w / 2 + hash(i * 13 + 2 + Math.round(g.x / 100)) * g.w;
@@ -746,8 +820,8 @@ function drawGarden(world, g, tone) {
       }
     }
   }
-  // Paths: a diagonal and a cross.
-  ctx.strokeStyle = shade(sky.night ? '#3a3a30' : '#c9b183', tone);
+  // Paths: trampled snow, a grey-blue line across the white lawn.
+  ctx.strokeStyle = shade(sky.night ? '#3a3f48' : '#b8c2cc', tone);
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(p1.x, p1.y); ctx.lineTo(p3.x, p3.y);
@@ -767,6 +841,117 @@ function drawGarden(world, g, tone) {
     ctx.arc(tp.x, tp.y, Math.min(tr, 4), 0, Math.PI * 2);
     ctx.fill();
   }
+}
+
+/** A small snow-dusted evergreen, drawn in screen space at the projected ground point. */
+function drawPine(x, y, r, tone) {
+  const ctx = CTX;
+  const h = r * 2.2;
+  ctx.fillStyle = shade('#2a5a2a', tone);
+  ctx.beginPath();
+  ctx.moveTo(x, y - h);
+  ctx.lineTo(x - r, y);
+  ctx.lineTo(x + r, y);
+  ctx.closePath();
+  ctx.fill();
+  // Snow on the top of the pine.
+  ctx.fillStyle = shade('#f4f7fa', tone);
+  ctx.beginPath();
+  ctx.moveTo(x, y - h);
+  ctx.lineTo(x - r * 0.45, y - h * 0.45);
+  ctx.lineTo(x + r * 0.45, y - h * 0.45);
+  ctx.closePath();
+  ctx.fill();
+}
+
+/** A decorated Christmas tree in screen space: three green tiers, coloured lights,
+ *  a snow-dusted top and a gold star. s is the tree's height in pixels; seed keeps the
+ *  lights in the same places every frame; big trees get more lights. */
+function drawChristmasTree(x, y, s, tone, night, seed, big) {
+  const ctx = CTX;
+  const tiers = [
+    { w: 0.62, y0: 0.42, y1: 1.0 },
+    { w: 0.48, y0: 0.18, y1: 0.62 },
+    { w: 0.32, y0: 0.0, y1: 0.38 },
+  ];
+  for (const t of tiers) {
+    ctx.fillStyle = shade('#2a6a3a', tone);
+    ctx.beginPath();
+    ctx.moveTo(x, y - s * t.y1);
+    ctx.lineTo(x - s * t.w, y - s * t.y0);
+    ctx.lineTo(x + s * t.w, y - s * t.y0);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // Snow dusting on the top tier.
+  ctx.fillStyle = shade('#f4f7fa', tone);
+  ctx.beginPath();
+  ctx.moveTo(x, y - s);
+  ctx.lineTo(x - s * 0.16, y - s * 0.62);
+  ctx.lineTo(x + s * 0.16, y - s * 0.62);
+  ctx.closePath();
+  ctx.fill();
+  // Trunk.
+  ctx.fillStyle = shade('#6a4a2e', tone);
+  ctx.fillRect(x - s * 0.05, y - s * 0.06, s * 0.1, s * 0.06);
+  // Lights: warm dots along the tiers, brighter at night.
+  const lights = ['#ff5a4a', '#ffd24a', '#39d98a', '#5ab8ff', '#ff9ad9'];
+  const lightCount = big ? 14 : 9;
+  for (let i = 0; i < lightCount; i += 1) {
+    const t = tiers[i % 3];
+    const f = (hash(seed + i * 13) - 0.5) * 1.4;
+    const lx = x + f * s * t.w;
+    const ly = y - s * (t.y0 + hash(seed + i * 17) * (t.y1 - t.y0));
+    ctx.fillStyle = lights[i % lights.length];
+    ctx.globalAlpha = night ? 0.95 : 0.75;
+    ctx.beginPath();
+    ctx.arc(lx, ly, Math.max(1.2, s * 0.045), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  // Gold star on top.
+  ctx.fillStyle = '#ffd24a';
+  ctx.beginPath();
+  ctx.arc(x, y - s * 1.06, Math.max(1.6, s * 0.07), 0, Math.PI * 2);
+  ctx.fill();
+}
+
+/** A snowman in screen space: three stacked balls, a carrot nose, coal eyes, a red
+ *  scarf and a black top hat. s is the snowman's height in pixels, ground at y. */
+function drawSnowman(x, y, s, tone) {
+  const ctx = CTX;
+  const balls = [
+    { r: 0.30, cy: 0.30 },
+    { r: 0.22, cy: 0.66 },
+    { r: 0.16, cy: 0.94 },
+  ];
+  ctx.fillStyle = shade('#f4f7fa', tone);
+  for (const b of balls) {
+    ctx.beginPath();
+    ctx.arc(x, y - s * b.cy, s * b.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Carrot nose on the head.
+  ctx.fillStyle = '#e86a2a';
+  ctx.beginPath();
+  ctx.moveTo(x + s * 0.14, y - s * 0.94);
+  ctx.lineTo(x + s * 0.34, y - s * 0.90);
+  ctx.lineTo(x + s * 0.14, y - s * 0.87);
+  ctx.closePath();
+  ctx.fill();
+  // Coal eyes.
+  ctx.fillStyle = '#1c2733';
+  ctx.beginPath();
+  ctx.arc(x - s * 0.06, y - s * 0.97, s * 0.03, 0, Math.PI * 2);
+  ctx.arc(x + s * 0.07, y - s * 0.97, s * 0.03, 0, Math.PI * 2);
+  ctx.fill();
+  // Red scarf.
+  ctx.fillStyle = '#c0392b';
+  ctx.fillRect(x - s * 0.18, y - s * 0.80, s * 0.36, s * 0.07);
+  // Black top hat.
+  ctx.fillStyle = '#1c2733';
+  ctx.fillRect(x - s * 0.10, y - s * 1.16, s * 0.20, s * 0.16);
+  ctx.fillRect(x - s * 0.16, y - s * 1.02, s * 0.32, s * 0.04);
 }
 
 /**
@@ -792,9 +977,11 @@ function drawCityBlocks(world) {
     if (rx >= 4) {
       ctx.fillStyle = sky.night ? '#3a3f47' : '#d8dce0';
       ctx.beginPath(); ctx.ellipse(sp.x, sp.y, rx, rz, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = sky.night ? '#5a4632' : '#b08050';
+      // The running track, dusted with snow.
+      ctx.fillStyle = sky.night ? '#4a4238' : '#c0b098';
       ctx.beginPath(); ctx.ellipse(sp.x, sp.y, rx * 0.8, rz * 0.8, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = sky.night ? '#1d3a24' : '#3f7a3f';
+      // The field, under snow.
+      ctx.fillStyle = sky.night ? '#1d2c3a' : '#dde5eb';
       ctx.beginPath(); ctx.ellipse(sp.x, sp.y, rx * 0.6, rz * 0.6, 0, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = 'rgba(255,255,255,0.7)';
       ctx.lineWidth = 1.5;
@@ -802,33 +989,42 @@ function drawCityBlocks(world) {
     }
   }
   // Terminals and the control tower at the destination airport.
-  for (const t of terminalBoxes(world)) drawBuilding(t, sky.night, toneFor(world.leg.sky), SKIES[world.leg.sky].sunX < 0.5);
-  // Avenue trees and beach palms.
+  for (const t of terminalBoxes(world)) drawBuilding(t, sky.night, toneFor(world.leg.sky), SKIES[world.leg.sky].sunX < 0.5, sky.night || world.leg.sky === 'dusk' || world.leg.sky === 'golden');
+  // Avenue trees and beach pines: evergreens with snow on their branches. No palms in
+  // winter — the boulevard pines stand where the palms stood.
   for (const t of layout.trees) {
     const p = project(cam, t.x, 0, t.z);
     if (!p) continue;
     const r = t.r * p.scale;
     if (r < 1) continue;
-    if (t.kind === 'palm') {
-      ctx.fillStyle = shade('#8a6a4a', tone);
-      ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(1, r * 0.25), 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = shade('#2a7a3a', tone);
-      ctx.beginPath(); ctx.arc(p.x, p.y - r * 0.4, Math.min(r, 5), 0, Math.PI * 2); ctx.fill();
-    } else {
-      ctx.fillStyle = shade('#2a5a2a', tone);
-      ctx.beginPath(); ctx.arc(p.x, p.y, Math.min(r, 4.5), 0, Math.PI * 2); ctx.fill();
-    }
+    drawPine(p.x, p.y, Math.min(r, 6), tone);
   }
-  // Lawn trees on the empty lots of the garden suburbs.
+  // Lawn pines on the empty lots of the garden suburbs.
   for (const pad of layout.pads) {
     for (const t of pad.trees) {
       const p = project(cam, pad.x + t.dx, 0, pad.z + t.dz);
       if (!p) continue;
       const r = 12 * p.scale;
       if (r < 1) continue;
-      ctx.fillStyle = shade('#2a5a2a', tone);
-      ctx.beginPath(); ctx.arc(p.x, p.y, Math.min(r, 4), 0, Math.PI * 2); ctx.fill();
+      drawPine(p.x, p.y, Math.min(r, 4.5), tone);
     }
+  }
+  // Christmas trees: green tiers, coloured lights, a gold star — glowing at night.
+  // Big trees (the terminal ones and the biggest in each garden) get more lights.
+  for (const t of layout.christmasTrees) {
+    const p = project(cam, t.x, 0, t.z);
+    if (!p) continue;
+    const s = t.s * p.scale;
+    if (s < 4) continue;
+    drawChristmasTree(p.x, p.y, s, tone, sky.night, t.x * 7 + t.z, t.big);
+  }
+  // Snowmen: three stacked balls, a carrot nose, a scarf and a top hat.
+  for (const m of layout.snowmen) {
+    const p = project(cam, m.x, 0, m.z);
+    if (!p) continue;
+    const s = m.s * p.scale;
+    if (s < 5) continue;
+    drawSnowman(p.x, p.y, s, tone);
   }
   // Cars in the street gaps.
   for (const car of layout.cars) {
@@ -875,6 +1071,25 @@ function drawRunwayStrip(ctx, z0, z1, night) {
   ctx.lineTo(corners[3].x, corners[3].y);
   ctx.closePath();
   ctx.fill();
+  // Snow on the runway shoulders: white strips along both edges, the cleared asphalt
+  // between them. The centreline, numbers and PAPI stay as they are.
+  for (const side of [-1, 1]) {
+    const sCorners = [
+      project(CAMERA, side * half, 40, z0),
+      project(CAMERA, side * (half - 16), 40, z0),
+      project(CAMERA, side * (half - 16), 40, z1),
+      project(CAMERA, side * half, 40, z1),
+    ];
+    if (sCorners.some((c) => c === null)) continue;
+    ctx.fillStyle = 'rgba(238,242,245,0.92)';
+    ctx.beginPath();
+    ctx.moveTo(sCorners[0].x, sCorners[0].y);
+    ctx.lineTo(sCorners[1].x, sCorners[1].y);
+    ctx.lineTo(sCorners[2].x, sCorners[2].y);
+    ctx.lineTo(sCorners[3].x, sCorners[3].y);
+    ctx.closePath();
+    ctx.fill();
+  }
   // Edge lines and centreline dashes, segment by segment along the strip.
   ctx.strokeStyle = '#e8ecf0';
   ctx.lineWidth = 1.5;
@@ -1373,6 +1588,51 @@ function drawWeather(world) {
     }
     ctx.stroke();
   }
+  // Snow: deterministic flakes, seeded by the frame number like the rain. Every leg
+  // gets a clear, readable fall — big flakes, not dust — and the blizzard leg gets a
+  // dense, wind-blown fall plus a white veil that eats the distance (the rings and the
+  // runway still read through it). A foreground layer of large slow flakes sits close
+  // to the camera, so the snow reads at one glance in every frame, including the
+  // flight-log backdrop behind the panel.
+  const snow = leg.weather.snow || 0;
+  if (snow > 0) {
+    const frame = Math.floor(world.time * 60);
+    const count = snow >= 2 ? 320 : 170;
+    const drift = leg.weather.gust * 26;
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    for (let i = 0; i < count; i += 1) {
+      let fx = (hash(i * 31 + frame * 7) * (W + 80) + frame * drift * 0.12 - 40) % (W + 80);
+      if (fx < 0) fx += W + 80;
+      const fy = ((hash(i * 17 + 2) * H + frame * (3 + hash(i * 5) * 4) + i * 3) % H) | 0;
+      const r = 1.4 + hash(i * 23 + 4) * (snow >= 2 ? 2.6 : 2.2);
+      ctx.globalAlpha = 0.55 + hash(i * 29 + 6) * 0.45;
+      ctx.beginPath();
+      ctx.arc(fx, fy, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Foreground flakes: few, large, slow — the ones the eye catches first.
+    const bigCount = snow >= 2 ? 42 : 26;
+    for (let i = 0; i < bigCount; i += 1) {
+      let fx = (hash(i * 47 + 101 + frame * 2) * (W + 120) + frame * drift * 0.05 - 60) % (W + 120);
+      if (fx < 0) fx += W + 120;
+      const fy = ((hash(i * 19 + 7) * H + frame * (1 + hash(i * 11) * 1.5) + i * 11) % H) | 0;
+      const r = 3.4 + hash(i * 37 + 3) * 2.2;
+      ctx.globalAlpha = 0.8 + hash(i * 41 + 9) * 0.2;
+      ctx.beginPath();
+      ctx.arc(fx, fy, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    if (snow >= 2) {
+      // Blizzard veil: the far city fades into white, the near frame stays clear.
+      const veil = ctx.createLinearGradient(0, 0, 0, H);
+      veil.addColorStop(0, 'rgba(228,236,242,0.30)');
+      veil.addColorStop(0.5, 'rgba(228,236,242,0.12)');
+      veil.addColorStop(1, 'rgba(228,236,242,0.04)');
+      ctx.fillStyle = veil;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
   // Lightning: a jagged bolt and a white flash over the sky.
   if (world.lightningFlash > 0 && world.bolt) {
     const b = world.bolt;
@@ -1570,7 +1830,7 @@ function drawTitle(world, best) {
   ctx.fillStyle = 'rgba(4,10,20,0.55)';
   ctx.fillRect(0, 0, W, H);
   text(ctx, 'MERIDIAN SKY', W / 2, 168, 74, '#f4f7fa', 'center', 800);
-  text(ctx, 'Six legs. One jet. Dawn to night across Meridian City.', W / 2, 206, 20, '#bfefff', 'center', 500);
+  text(ctx, 'Six legs. One jet. A snowy route across Meridian City.', W / 2, 206, 20, '#bfefff', 'center', 500);
   // Route map: six airports joined by one line.
   const mapY = 300;
   const stops = [
@@ -1635,11 +1895,13 @@ function drawGameOver(world, best) {
 
 function drawFlightLog(world, best) {
   const ctx = CTX;
-  ctx.fillStyle = 'rgba(4,10,20,0.72)';
+  // The dim is light on purpose: the snowy city and the falling snow behind the panel
+  // are part of the shot — the flight log must read as a winter scene, not a black box.
+  ctx.fillStyle = 'rgba(4,10,20,0.42)';
   ctx.fillRect(0, 0, W, H);
   panel(ctx, W / 2 - 380, 70, 760, 560);
   text(ctx, 'FLIGHT LOG — MERIDIAN SKY', W / 2, 122, 30, '#f4f7fa', 'center', 800);
-  text(ctx, 'All six legs flown, dawn to night.', W / 2, 150, 16, '#bfefff', 'center', 500);
+  text(ctx, 'All six legs flown, dawn to night, through the snow.', W / 2, 150, 16, '#bfefff', 'center', 500);
   let y = 196;
   ctx.strokeStyle = 'rgba(255,255,255,0.18)';
   ctx.beginPath();

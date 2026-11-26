@@ -1,10 +1,10 @@
 // The city: one coastal metropolis under the whole route, built to look finished, not
-// boxy. The layout is generated deterministically from the leg, so the same leg always
-// builds the same city: coloured-roof districts (old town terracotta, downtown glass,
-// marina, garden suburbs), a street grid with diagonal avenues, a river with bridges, a
-// big park and pocket gardens, a stadium, and a BAY whose beach curves into the city —
-// sand, turquoise shallows, umbrellas, palms, a boardwalk and a marina. The renderer
-// draws it; the world reads only the towers, the one thing tall enough to hit.
+// boxy. Winter edition: the same coloured-roof districts, street grid, river, park,
+// stadium and bay — dressed for snow, with Christmas trees in the gardens and by the
+// terminals, and snowmen in the park, the gardens and by the plaza. The layout is
+// generated deterministically from the leg, so the same leg always builds the same city.
+// The renderer draws it; the world reads only the towers, the one thing tall enough
+// to hit.
 
 export const CITY = {
   /** The city spans x in [-halfWidth, halfWidth]; the sea is beyond the coast. */
@@ -207,6 +207,71 @@ export function cityLayout(leg) {
     boats.push({ x: -8000 + hash2(i * 19 + 4, leg.id) * 16000, z: city.riverZ, sail: UMBRELLAS[i % UMBRELLAS.length] });
   }
 
+  // Christmas trees and snowmen: the winter dressing. Trees stand in the park and the
+  // gardens, along the avenues, by the beach boulevard, and one big one at each airport
+  // terminal; snowmen stand in the park, the gardens, by the plaza and at the stadium.
+  const christmasTrees = [];
+  const snowmen = [];
+  for (const g of [{ ...city.park }, ...gardens]) {
+    const n = g.pocket ? 2 : 4;
+    for (let i = 0; i < n; i += 1) {
+      const tx = g.x - g.w / 2 + hash2(leg.id * 97 + i * 13, Math.round(g.x / 100) + i * 7) * g.w;
+      const tz = g.z - g.d / 2 + hash2(leg.id * 89 + i * 17, Math.round(g.z / 100) + i * 11) * g.d;
+      if (Math.abs(tx) < CITY.corridorHalf + 300) continue;
+      // Keep the drop plaza clear on the cargo leg: the crate lands there.
+      if (leg.drop && Math.hypot(tx - leg.drop.x, tz - leg.drop.z) < 340) continue;
+      const big = !g.pocket && i === 0;
+      christmasTrees.push({ x: tx, z: tz, s: big ? 150 + hash2(i * 3 + 1, leg.id * 5 + Math.round(g.x)) * 40 : 90 + hash2(i * 3 + 1, leg.id * 5 + Math.round(g.x)) * 40, big });
+    }
+    if (!g.pocket) snowmen.push({ x: g.x + g.w * 0.28, z: g.z + g.d * 0.22, s: 80 });
+  }
+  // One big tree and one snowman at each airport terminal plaza, placed in the open
+  // ground between the runway and the terminals (clear of the taxiways and the
+  // terminal boxes) so they stand in the landing frame, not at its edge.
+  for (const tz of [-1400, leg.length + 900]) {
+    christmasTrees.push({ x: 350, z: tz - 300, s: 180, big: true });
+    snowmen.push({ x: -350, z: tz - 300, s: 80 });
+  }
+  // Trees along the avenues, in the forward half of the route.
+  for (const ax of [-2340, 2340]) {
+    for (let z = Math.floor(leg.length * 0.55); z <= zMax; z += 4200) {
+      if (Math.abs(z - city.riverZ) < 700) continue;
+      if (inRect(ax, z, city.park, 260)) continue;
+      if (gardens.some((g) => inRect(ax, z, g, 260))) continue;
+      if (ax < coastX(bay, z) + 900) continue;
+      christmasTrees.push({ x: ax + (hash2(ax, z) - 0.5) * 80, z, s: 100 + hash2(z, ax) * 40, big: false });
+    }
+  }
+  // A few along the beach boulevard, where the bay curves in.
+  for (let z = bay.z - bay.width; z <= bay.z + bay.width; z += 1400) {
+    const coast = coastX(bay, z);
+    if (coast < CITY.seaX + 1500) continue;
+    christmasTrees.push({ x: coast + CITY.sandWidth + 220, z, s: 95 + hash2(z, leg.id) * 35, big: false });
+  }
+  // Pines flanking the flight corridor, so the empty strip reads as a snowy avenue
+  // instead of bare ground. Every third one is a decorated Christmas tree, so the
+  // route itself is lined with lit trees in the cover frame. Kept clear of the river,
+  // the park, the gardens and the runway approach (z stays below leg.length - 3000).
+  for (const px of [-850, 850]) {
+    let k = 0;
+    for (let z = 2000; z <= leg.length - 3000; z += 1500) {
+      if (Math.abs(z - city.riverZ) < 700) continue;
+      if (inRect(px, z, city.park, 260)) continue;
+      if (gardens.some((g) => inRect(px, z, g, 260))) continue;
+      k += 1;
+      if (k % 3 === 0) {
+        christmasTrees.push({ x: px + (hash2(px, z) - 0.5) * 60, z, s: 120 + hash2(z, px) * 30, big: false });
+      } else {
+        trees.push({ x: px + (hash2(px, z) - 0.5) * 60, z, r: 16 + hash2(z, px) * 8, kind: 'pine' });
+      }
+    }
+  }
+  // One more snowman in the park, one at the stadium, and one by the corridor edge
+  // where the cover frame can see it.
+  snowmen.push({ x: city.park.x - city.park.w * 0.3, z: city.park.z - city.park.d * 0.25, s: 80 });
+  snowmen.push({ x: city.stadium.x + city.stadium.r + 500, z: city.stadium.z, s: 80 });
+  snowmen.push({ x: 950, z: Math.min(leg.length - 6000, 32000), s: 80 });
+
   return {
     riverZ: city.riverZ,
     park: city.park,
@@ -221,6 +286,8 @@ export function cityLayout(leg) {
     boats,
     bay,
     length: leg.length,
+    christmasTrees,
+    snowmen,
   };
 }
 
