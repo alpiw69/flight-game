@@ -4,9 +4,13 @@
 
 # MERIDIAN SKY — a flight game
 
+Winter edition: the same six-leg route under snow — a modern city with snow-capped
+coloured roofs, warm windows, Christmas trees and snowmen in the parks and plazas, and
+a blizzard on leg 4.
+
 A modern regional jet flies a six-leg route across the fictional coastal metropolis of
 Meridian City, from dawn to night. One jet, one route, six missions: a dawn ring course, a
-dusk passenger hop, a cargo drop onto a plaza, a storm leg, a night run over city lights,
+dusk passenger hop, a cargo drop onto a plaza, a blizzard leg, a night run over city lights,
 and a golden-hour finale through a tower canyon back to Meridian Hub.
 
 An entry for [Make the best flight game](https://make.fun/bounty/best-flight-game-20261126-0057)
